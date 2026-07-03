@@ -2,10 +2,11 @@
 
 A phone-first workout tracker for the **8-Week Advanced Muscle-Building Program (Women)** — 4 training days, 32 exercises.
 
-Two versions live in this repo:
+Three versions live in this repo:
 
-- **Web app (PWA)** — `index.html` at the root; no build step, works offline, installable from the browser
-- **Native iOS app (SwiftUI)** — in [`ios/`](ios/); local notifications for the rest timer, haptics, TestFlight/App Store ready. See [`ios/README.md`](ios/README.md) for build & ship instructions.
+- **Flutter app (iOS + Android)** — in [`flutter/`](flutter/); **one codebase for both platforms**, with rest-timer notifications, haptics, and wakelock. See [`flutter/README.md`](flutter/README.md). *Recommended if you want the app on Android and iPhone.*
+- **Web app (PWA)** — `index.html` at the root; no build step, works offline, installable from the browser on any phone
+- **Native iOS app (SwiftUI)** — in [`ios/`](ios/); iPhone-only alternative to the Flutter app. See [`ios/README.md`](ios/README.md).
 
 ## Features
 
