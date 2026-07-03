@@ -1,6 +1,11 @@
 # Gym Tracker 🏋️‍♀️
 
-A phone-first workout tracker for the **8-Week Advanced Muscle-Building Program (Women)** — 4 training days, 32 exercises. Built as a single-page app with no build step and no dependencies: open `index.html` and train.
+A phone-first workout tracker for the **8-Week Advanced Muscle-Building Program (Women)** — 4 training days, 32 exercises.
+
+Two versions live in this repo:
+
+- **Web app (PWA)** — `index.html` at the root; no build step, works offline, installable from the browser
+- **Native iOS app (SwiftUI)** — in [`ios/`](ios/); local notifications for the rest timer, haptics, TestFlight/App Store ready. See [`ios/README.md`](ios/README.md) for build & ship instructions.
 
 ## Features
 
