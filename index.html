@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#0d0e10">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Gym Tracker">
+  <title>Gym Tracker — 8-Week Advanced · Women</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; padding: 0; background: #0d0e10; }
+    body { font-family: 'Barlow', system-ui, sans-serif; color: #f4f5f6; }
+    input { font-family: inherit; }
+    input::placeholder { color: #4d5158; font-weight: 700; }
+    ::selection { background: #c8f72c; color: #15180a; }
+    button { font-family: inherit; }
+    @keyframes scbeat { 0%,100% { transform: scale(1); } 50% { transform: scale(.93); } }
+
+    .app { min-height: 100vh; background: #0d0e10; display: flex; justify-content: center; }
+    .inner { width: 100%; max-width: 460px; position: relative; padding-bottom: 160px; }
+
+    .hdr {
+      position: sticky; top: 0; z-index: 20;
+      background: #0d0e10; border-bottom: 1px solid #23262b;
+      padding: calc(16px + env(safe-area-inset-top)) 16px 12px;
+    }
+
+    .exes { padding: 14px 16px 0; }
+
+    .foot { text-align: center; color: #5a5f66; font-size: 12px; font-weight: 600; letter-spacing: .04em; padding: 6px 0 24px; }
+
+    .timer-wrap {
+      position: fixed; left: 50%; transform: translateX(-50%);
+      bottom: 0; width: 100%; max-width: 460px;
+      z-index: 50; padding: 0 12px calc(14px + env(safe-area-inset-bottom)); display: none;
+    }
+
+    .chip {
+      font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 11px;
+      letter-spacing: .08em; border-radius: 8px; padding: 5px 9px; cursor: pointer;
+      background: #16181c; border: 1px solid #2a2d33; color: #888d94;
+    }
+    .chip.on { background: rgba(200,247,44,.12); border-color: rgba(200,247,44,.4); color: #c8f72c; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="inner">
+    <div class="hdr" id="hdr"></div>
+    <div class="exes" id="exes"></div>
+    <div class="foot">Everything you log is saved automatically — works offline too.</div>
+  </div>
+</div>
+<div class="timer-wrap" id="timer"></div>
+
+<script>
+/* ── DATA ────────────────────────────────────────────────────── */
+const DATA = [
+  { title:'Lower & Core', focus:'Quads · Strength · Core', short:'LOWER', exercises:[
+    {name:'Dumbbell Step Up',        sets:3, reps:'10–12 ea. leg', rest:120},
+    {name:'Barbell Back Squat',      sets:3, reps:'10–12',         rest:150},
+    {name:'Leg Press / Hack Squat',  sets:3, reps:'10–12',         rest:150},
+    {name:'DB Goblet Squat',         sets:3, reps:'10–12',         rest:120},
+    {name:'Leg Extension',           sets:3, reps:'15',            rest:75 },
+    {name:'Leg Press Calf Raise',    sets:3, reps:'15',            rest:60 },
+    {name:'Weighted Crunch',         sets:3, reps:'15',            rest:60 },
+    {name:'Shoulder Taps',           sets:3, reps:'10 ea. side',   rest:60 },
+  ]},
+  { title:'Upper Body', focus:'Back · Chest · Shoulders · Arms', short:'UPPER', exercises:[
+    {name:'Pull Up / Lat Pulldown',  sets:3, reps:'10–12',         rest:120},
+    {name:'Seated Cable Row',        sets:3, reps:'10–12',         rest:120},
+    {name:'Incline DB Bench Press',  sets:3, reps:'10–12',         rest:120},
+    {name:'Tricep Dip',              sets:3, reps:'10–12',         rest:120},
+    {name:'DB Front Raise',          sets:3, reps:'10–12',         rest:60 },
+    {name:'DB Tricep Extension',     sets:3, reps:'12–15',         rest:75 },
+    {name:'Concentration Curl',      sets:3, reps:'12–15 ea. arm', rest:60 },
+    {name:'Hanging Leg Raise',       sets:3, reps:'12–15',         rest:60 },
+  ]},
+  { title:'Lower & Glutes', focus:'Glutes · Hamstrings · Posterior Chain', short:'GLUTES', exercises:[
+    {name:'Hip Thrust',              sets:3, reps:'10–12',         rest:150},
+    {name:'Hip Abduction Machine',   sets:3, reps:'10–12',         rest:75 },
+    {name:'Romanian Deadlift',       sets:3, reps:'10–12',         rest:150},
+    {name:'Walking Lunge',           sets:3, reps:'10–12 ea.',     rest:120},
+    {name:'Lying Leg Curls',         sets:3, reps:'12–15',         rest:75 },
+    {name:'Seated Calf Raise',       sets:3, reps:'15',            rest:60 },
+    {name:'Glute Bridge Pallof Press',sets:3,reps:'12',            rest:60 },
+    {name:'Side Plank',              sets:3, reps:'40–60s ea.',    rest:60 },
+  ]},
+  { title:'Upper Body', focus:'Chest · Shoulders · Arms · Back', short:'UPPER', exercises:[
+    {name:'Incline DB Flys',         sets:3, reps:'10–12',         rest:90 },
+    {name:'Dumbbell Pullover',       sets:3, reps:'10–12',         rest:90 },
+    {name:'Arnold Press',            sets:3, reps:'10–12',         rest:120},
+    {name:'DB Lateral Raise',        sets:3, reps:'10–12',         rest:60 },
+    {name:'Skull Crushers',          sets:3, reps:'15',            rest:75 },
+    {name:'Rope Tricep Extension',   sets:3, reps:'12–15',         rest:75 },
+    {name:'Cable Curl',              sets:3, reps:'10–12',         rest:75 },
+    {name:'Wood Chop',               sets:3, reps:'15 ea.',        rest:60 },
+  ]},
+];
+
+/* ── STATE ───────────────────────────────────────────────────── */
+let ST = { active: 0, log: {}, timer: null };
+try {
+  const s = JSON.parse(localStorage.getItem('gymtracker_v1'));
+  if (s) { ST.active = s.active || 0; ST.log = s.log || {}; }
+} catch(e) {}
+
+let SET = { units: 'kg', autoRest: true, big: false, keepAwake: false };
+try {
+  const s = JSON.parse(localStorage.getItem('gymtracker_settings_v1'));
+  if (s) SET = { ...SET, ...s };
+} catch(e) {}
+
+function save() {
+  try { localStorage.setItem('gymtracker_v1', JSON.stringify({active:ST.active, log:ST.log})); } catch(e) {}
+}
+function saveSettings() {
+  try { localStorage.setItem('gymtracker_settings_v1', JSON.stringify(SET)); } catch(e) {}
+}
+
+function logKey(a, ei, si) { return `${a}-${ei}-${si}`; }
+
+function getProgress() {
+  const d = DATA[ST.active]; let tot = 0, done = 0;
+  d.exercises.forEach((ex, ei) => {
+    for (let si = 0; si < ex.sets; si++) {
+      tot++;
+      if ((ST.log[logKey(ST.active, ei, si)] || {}).done) done++;
+    }
+  });
+  return { tot, done };
+}
+
+/* ── AUDIO ───────────────────────────────────────────────────── */
+let actx = null;
+
+function resumeAudio() {
+  try {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === 'suspended') actx.resume();
+  } catch(e) {}
+}
+
+function beep(t, freq, vol, dur) {
+  try {
+    if (!actx) return;
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.connect(g); g.connect(actx.destination);
+    o.type = 'sine'; o.frequency.value = freq || 880;
+    const v = vol || 0.35, d = dur || 0.32;
+    g.gain.setValueAtTime(0.0001, actx.currentTime + t);
+    g.gain.exponentialRampToValueAtTime(v, actx.currentTime + t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + t + d);
+    o.start(actx.currentTime + t); o.stop(actx.currentTime + t + d + 0.02);
+  } catch(e) {}
+}
+
+function alarm() {
+  resumeAudio();
+  beep(0); beep(0.4); beep(0.8);
+  if (navigator.vibrate) navigator.vibrate([300, 140, 300, 140, 400]);
+}
+
+function tick() { // short low blip for the 3-2-1 countdown
+  resumeAudio();
+  beep(0, 620, 0.18, 0.12);
+  if (navigator.vibrate) navigator.vibrate(60);
+}
+
+/* ── WAKE LOCK (keep screen on) ──────────────────────────────── */
+let wakeLock = null;
+
+async function applyWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try {
+    if (SET.keepAwake && !wakeLock) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    } else if (!SET.keepAwake && wakeLock) {
+      await wakeLock.release();
+      wakeLock = null;
+    }
+  } catch(e) { wakeLock = null; }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') applyWakeLock();
+});
+
+/* ── TIMER ───────────────────────────────────────────────────── */
+const BASE_TITLE = document.title;
+
+setInterval(() => {
+  if (!ST.timer || !ST.timer.running) return;
+  ST.timer.remaining = Math.max(0, ST.timer.remaining - 1);
+  if (ST.timer.remaining > 0 && ST.timer.remaining <= 3) tick();
+  if (ST.timer.remaining <= 0) {
+    ST.timer.running = false;
+    ST.timer.label = 'DONE — NEXT SET';
+    alarm();
+  }
+  renderTimer();
+}, 1000);
+
+function startRest(ei) {
+  const ex = DATA[ST.active].exercises[ei];
+  resumeAudio();
+  ST.timer = { name: ex.name, label: 'REST', total: ex.rest, remaining: ex.rest, running: true };
+  renderTimer();
+}
+
+function addTime() {
+  if (!ST.timer) return;
+  ST.timer.total += 15;
+  ST.timer.remaining += 15;
+  ST.timer.running = true;
+  ST.timer.label = 'REST';
+  renderTimer();
+}
+
+function togglePause() {
+  if (!ST.timer) return;
+  ST.timer.running = !ST.timer.running;
+  renderTimer();
+}
+
+function stopTimer() {
+  ST.timer = null;
+  renderTimer();
+}
+
+/* ── HELPERS ─────────────────────────────────────────────────── */
+function fmtRest(s) {
+  if (s >= 60) {
+    const m = Math.floor(s / 60), r = s % 60;
+    return r ? `${m}:${String(r).padStart(2, '0')}` : `${m}:00`;
+  }
+  return `${s}s`;
+}
+
+function fmtTime(r) {
+  return `${Math.floor(r / 60)}:${String(r % 60).padStart(2, '0')}`;
+}
+
+function esc(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/"/g,'&quot;')
+    .replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ── RENDERS ─────────────────────────────────────────────────── */
+function renderHeader() {
+  const A = ST.active, d = DATA[A];
+  const { tot, done } = getProgress();
+  const pct = tot ? Math.round(done / tot * 100) : 0;
+
+  const tabs = DATA.map((x, i) => {
+    const on = i === A;
+    return `<button onclick="setDay(${i})" style="flex:1;padding:9px 4px 8px;border-radius:12px;background:${on?'#c8f72c':'#16181c'};border:1px solid ${on?'#c8f72c':'#2a2d33'};cursor:pointer;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;letter-spacing:.04em;line-height:1;color:${on?'#15180a':'#f4f5f6'};">DAY ${i+1}</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:9px;letter-spacing:.06em;margin-top:3px;color:${on?'rgba(20,24,10,.62)':'#6b7077'};">${x.short}</div>
+    </button>`;
+  }).join('');
+
+  document.getElementById('hdr').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;letter-spacing:.16em;color:#c8f72c;">8-WEEK ADVANCED · WOMEN</div>
+      <button onclick="resetDay()" style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:.1em;color:#888d94;background:transparent;border:1px solid #2e3137;border-radius:8px;padding:5px 10px;cursor:pointer;">RESET DAY</button>
+    </div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:34px;line-height:1;letter-spacing:-.01em;text-transform:uppercase;">${esc(d.title)}</div>
+    <div style="color:#888d94;font-weight:600;font-size:13px;margin-top:5px;letter-spacing:.02em;">${esc(d.focus)}</div>
+    <div style="display:flex;gap:7px;margin-top:14px;">${tabs}</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:13px;">
+      <div style="flex:1;height:8px;background:#1c1f24;border-radius:99px;overflow:hidden;">
+        <div id="pfill" style="width:${pct}%;height:100%;background:#c8f72c;border-radius:99px;transition:width .25s ease;"></div>
+      </div>
+      <div id="ptxt" style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;color:#c8f72c;white-space:nowrap;letter-spacing:.04em;">${done}/${tot} SETS</div>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:11px;">
+      <button class="chip on" onclick="toggleUnits()">${SET.units.toUpperCase()} ⇄</button>
+      <button class="chip ${SET.autoRest?'on':''}" onclick="toggleSetting('autoRest')">AUTO-REST ${SET.autoRest?'ON':'OFF'}</button>
+      <button class="chip ${SET.big?'on':''}" onclick="toggleSetting('big')">BIG ${SET.big?'ON':'OFF'}</button>
+      <button class="chip ${SET.keepAwake?'on':''}" onclick="toggleSetting('keepAwake')">SCREEN ${SET.keepAwake?'ON':'OFF'}</button>
+    </div>`;
+}
+
+function renderExercises() {
+  const A = ST.active, d = DATA[A];
+  const big = SET.big;
+  const inH = big ? 62 : 54, inFs = big ? 30 : 24, chkW = big ? 58 : 52;
+  const unit = SET.units.toUpperCase();
+
+  const cardsHtml = d.exercises.map((ex, ei) => {
+    let doneCount = 0;
+
+    const setsHtml = Array.from({ length: ex.sets }, (_, si) => {
+      const k = logKey(A, ei, si);
+      const entry = ST.log[k] || {};
+      const dn = !!entry.done;
+      if (dn) doneCount++;
+
+      const numCol  = `color:${dn ? '#c8f72c' : '#6b7077'}`;
+      const chkBg   = dn ? '#c8f72c' : '#22252b';
+      const chkBrd  = dn ? '#c8f72c' : '#2a2d33';
+      const chkCol  = dn ? '#15180a' : '#4d5158';
+
+      return `<div style="display:grid;grid-template-columns:42px 1fr 1fr ${chkW}px;gap:8px;align-items:center;margin-top:9px;">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:13px;letter-spacing:.03em;${numCol};">SET ${si+1}</div>
+        <div style="position:relative;">
+          <input data-k="${k}" data-f="weight" inputmode="decimal" placeholder="–" value="${esc(entry.weight||'')}"
+            style="width:100%;height:${inH}px;background:#22252b;border:1px solid #2a2d33;border-radius:13px;color:#fff;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:${inFs}px;text-align:center;padding-right:4px;outline:none;display:block;">
+          <div style="position:absolute;right:9px;top:50%;transform:translateY(-50%);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:10px;letter-spacing:.08em;color:#6b7077;pointer-events:none;">${unit}</div>
+        </div>
+        <div style="position:relative;">
+          <input data-k="${k}" data-f="reps" inputmode="numeric" placeholder="–" value="${esc(entry.reps||'')}"
+            style="width:100%;height:${inH}px;background:#22252b;border:1px solid #2a2d33;border-radius:13px;color:#fff;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:${inFs}px;text-align:center;padding-right:4px;outline:none;display:block;">
+          <div style="position:absolute;right:9px;top:50%;transform:translateY(-50%);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:10px;letter-spacing:.08em;color:#6b7077;pointer-events:none;">REPS</div>
+        </div>
+        <button onclick="toggleSet(${ei},${si})"
+          style="height:${inH}px;border-radius:13px;border:2px solid ${chkBrd};background:${chkBg};color:${chkCol};font-size:24px;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;width:100%;">
+          ${dn ? '✓' : ''}
+        </button>
+      </div>`;
+    }).join('');
+
+    const allDone = doneCount === ex.sets;
+    const cardBg  = allDone ? '#181d12' : '#16181c';
+    const cardBrd = allDone ? 'rgba(200,247,44,.45)' : '#2a2d33';
+    const badgeBg = allDone ? '#c8f72c' : 'transparent';
+    const badgeBrd= allDone ? 'none'    : '2px solid #2a2d33';
+    const badgeOp = allDone ? '1' : '0';
+    const watchUrl = 'https://www.youtube.com/results?search_query=' + encodeURIComponent('how to do ' + ex.name + ' exercise proper form');
+
+    return `<div style="background:${cardBg};border:1px solid ${cardBrd};border-radius:18px;padding:15px;margin-bottom:13px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+        <div style="min-width:0;">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:21px;line-height:1.05;text-transform:uppercase;letter-spacing:.005em;">${esc(ex.name)}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:9px;">
+            <span style="display:inline-flex;align-items:center;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;letter-spacing:.05em;color:#c8f72c;background:rgba(200,247,44,.1);border:1px solid rgba(200,247,44,.25);border-radius:8px;padding:4px 9px;">TARGET ${esc(ex.reps)}</span>
+            <button onclick="startRest(${ei})" style="display:inline-flex;align-items:center;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;letter-spacing:.05em;color:#ff8a4f;background:rgba(255,122,47,.1);border:1px solid rgba(255,122,47,.28);border-radius:8px;padding:4px 9px;cursor:pointer;">REST ${fmtRest(ex.rest)}</button>
+            <a href="${watchUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;letter-spacing:.05em;color:#7db5ff;background:rgba(70,140,255,.12);border:1px solid rgba(70,140,255,.32);border-radius:8px;padding:4px 9px;text-decoration:none;">▶ WATCH</a>
+          </div>
+        </div>
+        <div style="width:30px;height:30px;flex:0 0 30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;margin-top:2px;background:${badgeBg};color:#15180a;border:${badgeBrd};opacity:${badgeOp};">✓</div>
+      </div>
+      <div style="margin-top:12px;">${setsHtml}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('exes').innerHTML = cardsHtml;
+
+  // Wire up input persistence
+  document.getElementById('exes').querySelectorAll('input[data-k]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const k = inp.dataset.k, f = inp.dataset.f;
+      if (!ST.log[k]) ST.log[k] = {};
+      ST.log[k][f] = inp.value;
+      save();
+    });
+  });
+}
+
+function updateProgress() {
+  const { tot, done } = getProgress();
+  const pct = tot ? Math.round(done / tot * 100) : 0;
+  const fill = document.getElementById('pfill');
+  const txt  = document.getElementById('ptxt');
+  if (fill) fill.style.width = pct + '%';
+  if (txt)  txt.textContent = `${done}/${tot} SETS`;
+}
+
+function renderTimer() {
+  const el = document.getElementById('timer');
+  const t = ST.timer;
+  if (!t) {
+    el.style.display = 'none';
+    document.title = BASE_TITLE;
+    return;
+  }
+
+  const tdone = t.remaining <= 0;
+  const pct = t.total ? Math.max(0, Math.min(100, t.remaining / t.total * 100)) : 0;
+  const pauseLbl = !t.running && t.remaining > 0 ? 'RESUME' : 'PAUSE';
+  const anim = tdone ? 'animation:scbeat .6s ease-in-out infinite;' : '';
+
+  document.title = tdone ? '✓ GO! — ' + BASE_TITLE : '⏱ ' + fmtTime(t.remaining) + ' — ' + BASE_TITLE;
+
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div style="background:${tdone?'#c8f72c':'#ff7a2f'};border-radius:18px;padding:13px 15px;box-shadow:0 10px 34px rgba(0,0,0,.5);${anim}">
+      <div style="height:5px;background:rgba(0,0,0,.22);border-radius:99px;overflow:hidden;margin-bottom:11px;">
+        <div style="width:${pct}%;height:100%;background:rgba(20,16,8,.4);border-radius:99px;"></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <div style="min-width:0;">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:12px;letter-spacing:.12em;color:rgba(20,16,8,.62);">${esc(t.label)}</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;color:#15110a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;">${esc(t.name)}</div>
+        </div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:40px;line-height:1;color:#15110a;font-variant-numeric:tabular-nums;flex:1;text-align:center;letter-spacing:.01em;">${fmtTime(t.remaining)}</div>
+        <div style="display:flex;gap:7px;">
+          <button onclick="togglePause()" style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:13px;letter-spacing:.04em;color:#15110a;background:rgba(20,16,8,.16);border:none;border-radius:11px;padding:11px 12px;cursor:pointer;min-width:62px;">${pauseLbl}</button>
+          <button onclick="addTime()" style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:13px;letter-spacing:.04em;color:#15110a;background:rgba(20,16,8,.16);border:none;border-radius:11px;padding:11px 12px;cursor:pointer;">+15</button>
+          <button onclick="stopTimer()" style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;color:#15110a;background:rgba(20,16,8,.16);border:none;border-radius:11px;padding:11px 13px;cursor:pointer;line-height:1;">✕</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ── ACTIONS ─────────────────────────────────────────────────── */
+function setDay(i) {
+  ST.active = i;
+  save();
+  renderHeader();
+  renderExercises();
+}
+
+function toggleSet(ei, si) {
+  const k = logKey(ST.active, ei, si);
+  if (!ST.log[k]) ST.log[k] = {};
+  ST.log[k].done = !ST.log[k].done;
+  save();
+
+  // Preserve input focus across re-render
+  const focused = document.activeElement;
+  const fk = focused?.dataset?.k;
+  const ff = focused?.dataset?.f;
+
+  renderExercises();
+  updateProgress();
+
+  if (fk) {
+    const el = document.querySelector(`[data-k="${fk}"][data-f="${ff}"]`);
+    if (el) el.focus();
+  }
+
+  if (SET.autoRest && ST.log[k] && ST.log[k].done) startRest(ei);
+}
+
+function resetDay() {
+  if (!confirm('Clear all logged sets for this day?')) return;
+  const A = ST.active, log = { ...ST.log };
+  Object.keys(log).forEach(k => { if (k.startsWith(A + '-')) delete log[k]; });
+  ST.log = log;
+  save();
+  renderExercises();
+  updateProgress();
+}
+
+function toggleUnits() {
+  SET.units = SET.units === 'kg' ? 'lb' : 'kg';
+  saveSettings();
+  renderHeader();
+  renderExercises();
+}
+
+function toggleSetting(key) {
+  SET[key] = !SET[key];
+  saveSettings();
+  renderHeader();
+  if (key === 'big') renderExercises();
+  if (key === 'keepAwake') applyWakeLock();
+}
+
+/* ── INIT ────────────────────────────────────────────────────── */
+renderHeader();
+renderExercises();
+renderTimer();
+applyWakeLock();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
